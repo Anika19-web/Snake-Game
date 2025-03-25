@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: radial-gradient(circle, #2c3e50, #1c2833);
+            font-family: Arial, sans-serif;
+        }
+        h1 {
+            color: white;
+        }
+        .game-container {
+            position: relative;
+            width: 90vmin;
+            height: 90vmin;
+            max-width: 400px;
+            max-height: 400px;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><circle cx="50" cy="50" r="40" fill="rgba(255,255,255,0.1)"/></svg>'), #222;
+            border: 5px solid #fff;
+            border-radius: 10px;
+            box-shadow: 0px 0px 15px #ffffff;
+            overflow: hidden;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .controls div {
+            display: flex;
+            justify-content: center;
+        }
+        .btn {
+            width: 50px;
+            height: 50px;
+            margin: 5px;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            border-radius: 10px;
+            background: #fff;
+            border: 2px solid #000;
+            cursor: pointer;
+        }
+        .btn:active {
+            background: #aaa;
+        }
+        .pause-btn {
+            margin-top: 10px;
+            width: 100px;
+            height: 40px;
+            font-size: 16px;
+            font-weight: bold;
+            background: red;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Score: <span id="score">0</span></h1>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <div class="controls">
+        <div><button class="btn" onclick="changeDirection('up')">⬆️</button></div>
+        <div>
+            <button class="btn" onclick="changeDirection('left')">⬅️</button>
+            <button class="btn" onclick="changeDirection('down')">⬇️</button>
+            <button class="btn" onclick="changeDirection('right')">➡️</button>
+        </div>
+        <button class="pause-btn" onclick="togglePause()">Pause</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let canvasSize = Math.min(window.innerWidth, window.innerHeight) * 0.9;
+        canvas.width = canvasSize;
+        canvas.height = canvasSize;
+
+        const boxSize = canvasSize / 20;
+        let snake = [{ x: 10, y: 10 }];
+        let food = { x: 5, y: 5, type: "rat" };
+        let dx = 1, dy = 0;
+        let score = 0;
+        let isPaused = false;
+
+        const foodTypes = ["rat", "fish"];
+        const colors = ["#ff5733", "#33ff57", "#3357ff", "#ff33ff", "#ffff33"];
+
+        function playSound(type) {
+            const sound = new Audio();
+            if (type === "eat") sound.src = "data:audio/wav;base64,UklGRhQAAABXQVZFZm10IBAAAAABAAEARKwAABCxAgAEABAAZGF0YQAA";
+            if (type === "gameover") sound.src = "data:audio/wav;base64,UklGRhQAAABXQVZFZm10IBAAAAABAAEARKwAABCxAgAEABAAZGF0YQAA";
+            sound.play();
+        }
+
+        function getRandomFood() {
+            return foodTypes[Math.floor(Math.random() * foodTypes.length)];
+        }
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Food
+            ctx.fillStyle = food.type === "rat" ? "#FF0000" : "#00FF00";
+            ctx.beginPath();
+            ctx.arc((food.x + 0.5) * boxSize, (food.y + 0.5) * boxSize, boxSize / 2.5, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Draw Snake with Tail Effect
+            snake.forEach((segment, index) => {
+                ctx.fillStyle = colors[index % colors.length];
+                ctx.beginPath();
+                ctx.arc((segment.x + 0.5) * boxSize, (segment.y + 0.5) * boxSize, boxSize / 2.5, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+
+            document.getElementById("score").innerText = score;
+        }
+
+        function updateGame() {
+            if (isPaused) return;
+
+            let newX = snake[0].x + dx;
+            let newY = snake[0].y + dy;
+
+            if (newX === food.x && newY === food.y) {
+                score += 10;
+                playSound("eat");
+                food = { 
+                    x: Math.floor(Math.random() * 20), 
+                    y: Math.floor(Math.random() * 20),
+                    type: getRandomFood()
+                };
+            } else {
+                snake.pop();
+            }
+
+            if (newX < 0 || newY < 0 || newX >= 20 || newY >= 20 ||
+                snake.some(segment => segment.x === newX && segment.y === newY)) {
+                playSound("gameover");
+                setTimeout(() => alert("Game Over! Your Score: " + score), 200);
+                document.location.reload();
+            }
+
+            snake.unshift({ x: newX, y: newY });
+        }
+
+        function changeDirection(direction) {
+            if (direction === "left" && dx === 0) { dx = -1; dy = 0; }
+            if (direction === "up" && dy === 0) { dx = 0; dy = -1; }
+            if (direction === "right" && dx === 0) { dx = 1; dy = 0; }
+            if (direction === "down" && dy === 0) { dx = 0; dy = 1; }
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            document.querySelector(".pause-btn").innerText = isPaused ? "Resume" : "Pause";
+        }
+
+        setInterval(() => { updateGame(); drawGame(); }, 200);
+    </script>
+</body>
+</html>
